@@ -47,6 +47,100 @@ class MultiLayerNet:
 
         self.last_layer = SoftmaxWithLoss()
 
-    
-
+    def __init_weight(self, weight_init_std):
+        """ Settings the initial value of weight
         
+        Parameters
+        ----------
+        weight_init_std: Specify the standard deviation of the weights
+            selected: 'relu', 'he' -> "Initial value of He"
+            selected: 'sigmoid', 'xavier' -> "Initial value of Xavier"
+        """
+
+        all_size_list = [self.input_size] + self.hidden_size_list + [self.output_size]
+        for idx in range(1, len(all_size_list)):
+            scale = weight_init_std
+            if str(weight_init_std).lower() in ('relu', 'he'):
+                scale = np.sqrt(2.0 / all_size_list[idx - 1])
+            elif str(weight_init_std).lower() in ('sigmoid', 'xavier'):
+                scale = np.sqrt(1.0 / all_size_list[idx - 1])
+
+            self.params['W' + str(idx)] = scale * np.random.randn(all_size_list[idx - 1], all_size_list[idx])
+            self.params['b' + str(idx)] = np.zeros(all_size_list[idx])
+
+    def predict(self, x):
+        for layer in self.layers.vlaues():
+            x = layer.forward(x)
+
+        return x
+
+    def loss(self, x, t):
+        """find the lost function
+
+        Parameters
+        ----------
+        x : input data
+        t : teacher label
+
+        Returns
+        ---------
+        Lost function value
+        """
+
+        y = self.predict(x)
+
+        weight_decay = 0
+        for idx in range(1,self.hidden_layer_num + 2 ):
+            W = self.params['W' + str(idx)]
+            weight_decay += 0.5 * self.weight_decay_lambda * np.sum(W ** 2)
+
+        return self.last_layer.forward(y, t) + weight_decay
+
+    def accuracy(self, x, t):
+        y = self.predict(x)
+        y = np.argmax(y, axis=1)
+        if t.ndim != 1 : t = np.argmax(t, axis=1)
+
+        accuracy = np.sum(y == t) / float(x.shape[0])
+
+        return accuracy
+
+    def numerical_gradient(self, x, t):
+        """ Find the gradient(Numerical differentiation)
+        
+
+        Returns
+        ----------
+        grads['W1'], grads['W2'] ... weight for each layer
+        grads['11'], grads['b2'] ... weight for each layer
+        """
+
+        loss_W = lambda W: self.loss(x, t)
+
+        grads = {}
+        for idx in range(1, self.hidden_layer_num + 2):
+            grads['W' + str(idx)] = numerical_gradient(loss_W, self.params['W' + str(idx)])
+
+        return grads
+
+    def gradient(self, x, t):
+        """Find the gradient(error back propagation method)
+        """
+
+        # forward
+        self.loss(x, t)
+
+        # backward
+        dout = 1
+        dout = self.last_layer.backward(dout)
+
+        layers = list(self.layers.values())
+        layers.reverse()
+        for layer in layers:
+            dout = layer.backward(dout)
+
+        # Setting
+        grads = {}
+        for idx in range(1, self.hidden_layer_num + 2):
+            grads['W' + str(idx)] = self.layers['Affine' + str(idx)].dW + self.weight_decay_lambda * self.layers['Affine' + str(idx)].W
+            grads['b' + str(idx)] = self.layers['Affine' + str(idx)].db
