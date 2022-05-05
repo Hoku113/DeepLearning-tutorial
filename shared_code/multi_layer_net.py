@@ -69,7 +69,7 @@ class MultiLayerNet:
             self.params['b' + str(idx)] = np.zeros(all_size_list[idx])
 
     def predict(self, x):
-        for layer in self.layers.vlaues():
+        for layer in self.layers.values():
             x = layer.forward(x)
 
         return x
