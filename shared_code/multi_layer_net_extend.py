@@ -1,7 +1,4 @@
 import sys, os
-from flask import g
-
-from regex import W
 sys.path.append(os.pardir)
 from collections import OrderedDict
 from shared_code.layer import *
@@ -52,7 +49,7 @@ class MultiLayerNetExtend:
             if self.use_batchnorm:
                 self.params[f'gamma{str(idx)}'] = np.ones(hidden_size_list[idx-1])
                 self.params[f'beta{str(idx)}'] = np.zeros(hidden_size_list[idx-1])
-                self.layers[f'Batchnorm{str(idx)}'] = BatchNormalization(self.params[f'gamma{str(idx)}'], self.params[f'beta{idx}'])
+                self.layers[f'BatchNorm{str(idx)}'] = BatchNormalization(self.params[f'gamma{str(idx)}'], self.params[f'beta{idx}'])
 
             self.layers[f'Activation_function{idx}'] = activation_layer[activation]()
 
@@ -88,7 +85,7 @@ class MultiLayerNetExtend:
     def predict(self, x, train_flg=False):
         for key, layer in self.layers.items():
             if "Dropout" in key or "BatchNorm" in key:
-                x = layer.froward(x, train_flg)
+                x = layer.forward(x, train_flg)
             else:
                 x = layer.forward(x)
 
@@ -149,10 +146,10 @@ class MultiLayerNetExtend:
         grads = {}
         for idx in range(1, self.hidden_layer_num+2):
             grads[f'W{idx}'] = self.layers[f'Affine{idx}'].dW + self.weight_decay_lambda * self.params[f'W{idx}']
-            grads[f'b{idx}'] = self.layers[f'Afine{idx}'].db
+            grads[f'b{idx}'] = self.layers[f'Affine{idx}'].db
 
             if self.use_batchnorm and idx != self.hidden_layer_num+1:
                 grads[f'gamma{idx}'] = self.layers[f'BatchNorm{idx}'].dgamma
                 grads[f'beta{idx}'] = self.layers[f'BatchNorm{idx}'].dbeta
 
-            return grads
+        return grads
