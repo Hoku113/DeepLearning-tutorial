@@ -6,6 +6,10 @@ class SGD:
 
     def update(self, params, grads):
         for key in params.keys():
+
+            # debug
+            print(grads[key])
+
             params[key] -= self.lr * grads[key]
 
 class Momentum:
