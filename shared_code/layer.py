@@ -54,9 +54,9 @@ class Affine:
         self.db = np.sum(dout, axis=0)
 
         # debug
-        # print(f"dx = {dx}")
-        # print(f"dW = {self.dW}")
-        # print(f"db = {self.db}")
+        print(f"dx = {dx}")
+        print(f"dW = {self.dW}")
+        print(f"db = {self.db}")
 
         return dx
 

@@ -82,6 +82,9 @@ class MultiLayerNetExtend:
             self.params[f'W{idx}'] = scale * np.random.randn(all_size_list[idx-1], all_size_list[idx])
             self.params[f'b{idx}'] = np.zeros(all_size_list[idx])
 
+        # debug
+        # print(f"self.params: {self.params.keys()}")
+
     def predict(self, x, train_flg=False):
         for key, layer in self.layers.items():
             if "Dropout" in key or "BatchNorm" in key:
@@ -137,6 +140,11 @@ class MultiLayerNetExtend:
         dout = self.last_layer.backward(dout)
 
         layers = list(self.layers.values())
+
+        # debug
+        # print(f"layers: {layers}")
+        # print(f"layers.reverse: {layers.reverse()}")
+
         layers.reverse()
 
         for layer in layers:

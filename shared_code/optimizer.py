@@ -7,7 +7,7 @@ class SGD:
     def update(self, params, grads):
 
         print(params.keys())
-        print(grads.keys())
+        print(grads.keys()) # ここでキーエラーが出てる(いくつかのキーが保存されていない状態)
 
         for key in params.keys():
             params[key] -= self.lr * grads[key]
