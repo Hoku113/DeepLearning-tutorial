@@ -25,7 +25,7 @@ class Trainer:
         self.evaluate_sample_num_per_epoch = evaluate_sample_num_per_epoch
 
         # optimizer
-        optimizer_class_dict = {'gsd': SGD, 'momentum': Momentum, 'nesterov':Nesterov,
+        optimizer_class_dict = {'sgd': SGD, 'momentum': Momentum, 'nesterov':Nesterov,
                                 'adagrad':AdaGrad, 'rmsprop':RMSprop, 'adam':Adam}
 
         self.optimizer = optimizer_class_dict[optimizer.lower()](**optimizer_param)
@@ -67,4 +67,15 @@ class Trainer:
             self.train_acc_list.append(train_acc)
             self.test_acc_list.append(test_acc)
 
-            if test.verbose: print("")
+            if self.verbose: print(f"=== epoch: {self.current_epoch}, train acc: {train_acc}, test acc: {test_acc} ===")
+        self.current_iter += 1
+
+    def train(self):
+        for i in range(self.max_iter):
+            self.train_step()
+
+        test_acc = self.network.accuracy(self.x_test, self.t_test)
+
+        if self.verbose:
+            print("======= Final test Accuracy ======")
+            print(f"test acc: {test_acc}")
