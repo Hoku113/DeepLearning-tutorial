@@ -40,12 +40,16 @@ class Affine:
         self.W = W
         self.b = b
         self.x = None
+        self.original_x_shape = None
         self.dW = None
         self.db = None
 
     def forward(self, x):
+        self.original_x_shape = x.shape
+        x = x.reshape(x.shape[0], -1)
         self.x = x
-        out = np.dot(x, self.W) + self.b
+
+        out = np.dot(self.x, self.W) + self.b
 
         return out
 
@@ -54,10 +58,12 @@ class Affine:
         self.dW = np.dot(self.x.T, dout)
         self.db = np.sum(dout, axis=0)
 
-        # debug
-        print(f"dx = {dx}")
-        print(f"dW = {self.dW}")
-        print(f"db = {self.db}")
+
+        dx = dx.reshape(*self.original_x_shape)
+        # # debug
+        # print(f"dx = {dx}")
+        # print(f"dW = {self.dW}")
+        # print(f"db = {self.db}")
 
         return dx
 
@@ -223,13 +229,13 @@ class Convolution:
 
     def backward(self, dout):
         FN, C, FH, FW = self.W.shape
-        dout = dout.transpose(0, 2, 3, 1).reshape(-1, FW)
+        dout = dout.transpose(0, 2, 3, 1).reshape(-1, FN)
 
         self.db = np.sum(dout, axis=0)
         self.dW = np.dot(self.col.T, dout)
         self.dW = self.dW.transpose(1, 0).reshape(FN, C, FH, FW)
 
-        dcol = np.dot(dout, self.col_w.T)
+        dcol = np.dot(dout, self.col_W.T)
         dx = col2im(dcol, self.x.shape, FH, FW, self.stride, self.pad)
 
         return dx
@@ -246,7 +252,7 @@ class Pooling:
     
     def forward(self, x):
         N, C, H, W = x.shape
-        out_h = int(1 + (W - self.pool_h) / self.stride)
+        out_h = int(1 + (H - self.pool_h) / self.stride)
         out_w = int(1 + (W - self.pool_w ) / self.stride)
 
         col = im2col(x, self.pool_h, self.pool_w, self.stride, self.pad)
@@ -263,13 +269,13 @@ class Pooling:
 
     def backward(self, dout):
         dout = dout.transpose(0, 2, 3, 1)
-
+        
         pool_size = self.pool_h * self.pool_w
         dmax = np.zeros((dout.size, pool_size))
         dmax[np.arange(self.arg_max.size), self.arg_max.flatten()] = dout.flatten()
         dmax = dmax.reshape(dout.shape + (pool_size,))
-
+        
         dcol = dmax.reshape(dmax.shape[0] * dmax.shape[1] * dmax.shape[2], -1)
         dx = col2im(dcol, self.x.shape, self.pool_h, self.pool_w, self.stride, self.pad)
-
+        
         return dx

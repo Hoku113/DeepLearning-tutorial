@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from transformers import OrderedDict
+import pickle
 import numpy as np
 from shared_code.layer import Affine, Pooling, Relu, SoftmaxWithLoss
 from shared_code.layer import Convolution
@@ -50,7 +50,7 @@ class SimpleConvNet:
         self.layers['Affine1'] = Affine(self.params['W2'],
                                         self.params['b2'])
 
-        self.layers['Relu2']
+        self.layers['Relu2'] = Relu()
         self.layers['Affine2'] = Affine(self.params['W3'],
                                       self.params['b3'])
 
@@ -64,6 +64,20 @@ class SimpleConvNet:
     def loss(self, x, t):
         y = self.predict(x)
         return self.last_layer.forward(y, t)
+
+    def accuracy(self, x, t, batch_size=100):
+        if t.ndim != 1: t = np.argmax(t, axis=1)
+
+        acc = 0.0
+
+        for i in range(int(x.shape[0] / batch_size)):
+            tx = x[i*batch_size:(i+1)*batch_size]
+            tt = t[i*batch_size:(i+1)*batch_size]
+            y = self.predict(tx)
+            y = np.argmax(y, axis=1)
+            acc += np.sum(y == tt)
+
+        return acc / x.shape[0]
 
     def gradient(self, x, t):
         # forward
@@ -88,3 +102,20 @@ class SimpleConvNet:
         grads['b3'] = self.layers['Affine2'].db
 
         return grads
+
+    def save_params(self, file_name='params.pkl'):
+        params = {}
+        for key, val in self.params.items():
+            params[key] = val
+        with open(file_name, 'wb') as f:
+            pickle.dump(params, f)
+    
+    def load_params(self, file_name='params.pkl'):
+        with open(file_name, 'rb') as f:
+            params = pickle.load(f)
+        for key, val in params.items():
+            self.params[key] = val
+
+        for i, key in enumerate(['Conv1', 'Affine1', 'Affine2']):
+            self.layers[key].W = self.params[f'W{i+1}']
+            self.layers[key].b = self.params[f'b{i+1}']
