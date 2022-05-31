@@ -56,16 +56,95 @@ class DeepConvNet:
 
         # Create layer
         self.layers = []
+        self.layers.append(Convolution(self.params['W1'], self.params['b1'], 
+                           conv_param_1['stride'], conv_param_1['pad']))
+        self.layers.append(Relu())
+        self.layers.append(Convolution(self.params['W2'], self.params['b2'], 
+                           conv_param_2['stride'], conv_param_2['pad']))
+        self.layers.append(Relu())
+        self.layers.append(Pooling(pool_h=2, pool_w=2, stride=2))
+        self.layers.append(Convolution(self.params['W3'], self.params['b3'], 
+                           conv_param_3['stride'], conv_param_3['pad']))
+        self.layers.append(Relu())
+        self.layers.append(Convolution(self.params['W4'], self.params['b4'],
+                           conv_param_4['stride'], conv_param_4['pad']))
+        self.layers.append(Relu())
+        self.layers.append(Pooling(pool_h=2, pool_w=2, stride=2))
+        self.layers.append(Convolution(self.params['W5'], self.params['b5'],
+                           conv_param_5['stride'], conv_param_5['pad']))
+        self.layers.append(Relu())
+        self.layers.append(Convolution(self.params['W6'], self.params['b6'],
+                           conv_param_6['stride'], conv_param_6['pad']))
+        self.layers.append(Relu())
+        self.layers.append(Pooling(pool_h=2, pool_w=2, stride=2))
+        self.layers.append(Affine(self.params['W7'], self.params['b7']))
+        self.layers.append(Relu())
+        self.layers.append(Dropout(0.5))
+        self.layers.append(Affine(self.params['W8'], self.params['b8']))
+        self.layers.append(Dropout(0.5))
 
-        for i in range(1, 7):
-            self.layers.append(Convolution(self.params[f'W{i}'], self.params[f'b{i}'],
-                                            conv_param_1['stride'], conv_param_2['pad']))
-            if i % 2 == 0:
-                self.layers.append(Pooling(pool_h=2, pool_w=2, stride=2))
-        
-        # relu layer
-        for i in index_relu():
-            if i == 9: 
-                continue
+        self.last_layer = SoftmaxWithLoss()
+
+    def predict(self, x, train_flg=False):
+        for layer in self.layers:
+            if isinstance(layer, Dropout):
+                x = layer.forward(x, train_flg)
             else:
-                self.layers.append(Relu())
+                x = layer.forward(x)
+        return x
+
+    def loss(self, x, t):
+        y = self.predict(x, train_flg=True)
+        return self.last_layer.forward(y, t)
+
+    def accuracy(self, x, t, batch_size=100):
+        if t.ndim != 1 : t = np.argmax(t, axis=1)
+
+        acc = 0.0
+
+        for i in range(int(x.shape[0] / batch_size)):
+            tx = x[i*batch_size:(i+1)*batch_size]
+            tt = t[i*batch_size:(i+1)*batch_size]
+            y = self.predict(tx, train_flg=True)
+            y = np.argmax(y, axis=1)
+            acc += np.sum(y == tt)
+
+        return acc / x.shape[0]
+
+    def gradient(self, x, t):
+        # forward
+        self.loss(x, t)
+
+        # backward
+        dout = 1
+        dout = self.last_layer.backward(dout)
+
+        tmp_layers = self.layers.copy()
+        tmp_layers.reverse()
+        for layer in tmp_layers:
+            dout = layer.backward(dout)
+
+        # settings
+        grads = {}
+        for i, layer_idx in enumerate((0, 2, 5, 7, 10, 12, 15, 18)):
+            grads[f'W{i+1}'] = self.layers[layer_idx].dW
+            grads[f'b{i+1}'] = self.layers[layer_idx].db
+
+        return grads
+    
+    def save_params(self, file_name="params.pkl"):
+        params = {}
+        for key, val in self.params.items():
+            params[key] = val
+        with open(file_name, 'wb') as f:
+            pickle.dump(params, f)
+
+    def load_params(self, file_name='params.pkl'):
+        with open(file_name, 'rb') as f:
+            params = pickle.load(f)
+        for key, val in params.items():
+            self.params[key] = val
+        
+        for i, layer_idx in enumerate((0, 2, 5, 7, 10, 12, 15, 18)):
+            self.layers[layer_idx].W = self.params[f'W{i+1}']
+            self.layers[layer_idx].b = self.params[f'b{i+1}']
