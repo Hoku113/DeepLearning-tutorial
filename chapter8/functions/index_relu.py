@@ -26,5 +26,3 @@ for i in range(1, 11):
 #         continue
 #     else:
 #         layer.insert(i, 'relu')
-
-print(layer)

@@ -1,11 +1,11 @@
+import sys, os
+sys.path.append(os.pardir)
 import pickle
 import numpy as np
 from collections import OrderedDict
 from shared_code.layer import *
 from functions.index_relu import index_relu
-import sys
-import os
-sys.path.append(os.pardir)
+
 
 
 class DeepConvNet:
